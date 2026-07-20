@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 
-type Mode = "summary" | "extract";
+type Mode = "summary" | "extract" | "ask";
 
 const MODES: { id: Mode; label: string; hint: string }[] = [
   { id: "summary", label: "Summarize", hint: "Executive summary + key points" },
   { id: "extract", label: "Extract data", hint: "Dates, parties, amounts" },
+  { id: "ask", label: "Ask a question", hint: "Ask anything about the document" },
 ];
 
 export default function Home() {
@@ -18,6 +19,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [question, setQuestion] = useState("");
 
   async function copyJson() {
     if (!result) return;
@@ -77,7 +79,9 @@ export default function Home() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(
-          tab === "pdf" && pdf ? { pdf: pdf.data, mode } : { text, mode }
+          tab === "pdf" && pdf
+            ? { pdf: pdf.data, mode, ...(mode === "ask" && { question }) }
+            : { text, mode, ...(mode === "ask" && { question }) }
         ),
       });
 
@@ -85,7 +89,7 @@ export default function Home() {
       if (!res.ok) {
         setError(data.error ?? "Something went wrong.");
       } else {
-        setResult({ mode, data: data.result });
+        setResult({ mode, data: data.result, ...(mode === "ask" && { question }) });
       }
     } catch {
       setError("Could not reach the server.");
@@ -200,9 +204,21 @@ export default function Home() {
             </div>
           </div>
 
+          {mode === "ask" && (
+            <div className="mt-4">
+              <input
+                type="text"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="What would you like to know?"
+                className="w-full rounded-xl border border-white/10 bg-[#0f0f15] p-4 text-sm text-gray-200 placeholder-gray-500 focus:border-violet-500 focus:outline-none"
+              />
+            </div>
+          )}
+
           <button
             onClick={handleSubmit}
-            disabled={loading || !hasSource}
+            disabled={loading || !hasSource || (mode === "ask" && !question.trim())}
             className="mt-6 w-full rounded-xl bg-violet-500 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition hover:bg-violet-400 disabled:opacity-40 disabled:shadow-none"
           >
             {loading ? "Processing…" : "Process document"}
@@ -312,6 +328,13 @@ export default function Home() {
                           ))
                         : "—"}
                     </Row>
+                  </div>
+                )}
+
+                {result.mode === "ask" && (
+                  <div className="mt-4">
+                    <Row label="Question">{result.question}</Row>
+                    <Row label="Answer">{result.data.answer}</Row>
                   </div>
                 )}
                 <div className="mt-4 flex justify-end gap-2 border-t border-dashed border-white/10 pt-3">

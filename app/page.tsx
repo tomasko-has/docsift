@@ -90,6 +90,7 @@ export default function Home() {
         setError(data.error ?? "Something went wrong.");
       } else {
         setResult({ mode, data: data.result, ...(mode === "ask" && { question }) });
+        if (mode === "ask") setQuestion("");
       }
     } catch {
       setError("Could not reach the server.");
@@ -122,7 +123,7 @@ export default function Home() {
           </p>
         </div>
         <div className="font-mono text-[11px] uppercase tracking-[0.15em] text-violet-400">
-          AI document intelligence · demo
+          AI document intelligence
         </div>
       </header>
 
@@ -221,7 +222,7 @@ export default function Home() {
             disabled={loading || !hasSource || (mode === "ask" && !question.trim())}
             className="mt-6 w-full rounded-xl bg-violet-500 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition hover:bg-violet-400 disabled:opacity-40 disabled:shadow-none"
           >
-            {loading ? "Processing…" : "Process document"}
+            {loading ? "Processing…" : mode === "ask" ? "Ask" : "Process document"}
           </button>
 
           {error && (

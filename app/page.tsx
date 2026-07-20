@@ -26,6 +26,35 @@ export default function Home() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  function exportCsv() {
+    if (!result || result.mode !== "extract") return;
+    const d = result.data;
+    const rows: string[][] = [["Section", "Field1", "Field2"]];
+
+    for (const date of d.dates ?? []) {
+      rows.push(["Dates", date.date, date.context]);
+    }
+    for (const party of d.parties ?? []) {
+      rows.push(["Parties", party.name, party.role]);
+    }
+    for (const amount of d.amounts ?? []) {
+      rows.push(["Amounts", amount.value, amount.context]);
+    }
+
+    // Wrap each cell in quotes and escape any quotes inside the value
+    const csv = rows
+      .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "docsift-extract.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function handleFile(file: File | undefined) {
     if (!file || file.type !== "application/pdf") return;
     const reader = new FileReader();

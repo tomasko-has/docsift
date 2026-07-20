@@ -1,10 +1,14 @@
 const PROMPTS = {
     summary: `Summarize the document. Respond in English regardless of the document's language. Return ONLY JSON, no markdown fences, exactly in this shape:
   {"summary": "2-3 sentence summary", "key_points": ["3 to 5 key points"]}`,
-  
+
     extract: `Extract structured data from the document. Respond in English regardless of the document's language. Return ONLY JSON, no markdown fences, exactly in this shape:
   {"doc_type": "type of document", "dates": [{"date": "...", "context": "what it refers to"}], "parties": [{"name": "...", "role": "..."}], "amounts": [{"value": "...", "context": "..."}]}
   Use empty arrays for missing data. Never invent data that is not in the document.`,
+
+    ask: `Answer the following question about the document. Respond in English regardless of the document's language. Return ONLY JSON, no markdown fences, exactly in this shape:
+  {"answer": "your answer here"}
+  Base your answer only on the document content. Never invent data that is not in the document. If the document does not contain enough information to answer, say so.`,
   };
   
   export async function POST(request: Request) {
@@ -13,13 +17,23 @@ const PROMPTS = {
         text,
         pdf,
         mode,
-      }: { text?: string; pdf?: string; mode: "summary" | "extract" } =
+        question,
+      }: { text?: string; pdf?: string; mode: "summary" | "extract" | "ask"; question?: string } =
         await request.json();
-  
+
       if (!text && !pdf) {
         return Response.json({ error: "No document provided." }, { status: 400 });
       }
-  
+
+      if (mode === "ask" && !question?.trim()) {
+        return Response.json({ error: "Please enter a question." }, { status: 400 });
+      }
+
+      // For ask mode, append the user's question to the prompt
+      const prompt = mode === "ask"
+        ? `${PROMPTS[mode]}\n\nQuestion: ${question}`
+        : PROMPTS[mode];
+
       const content = pdf
         ? [
             {
@@ -30,12 +44,12 @@ const PROMPTS = {
                 data: pdf,
               },
             },
-            { type: "text", text: PROMPTS[mode] },
+            { type: "text", text: prompt },
           ]
         : [
             {
               type: "text",
-              text: `<document>\n${text}\n</document>\n\n${PROMPTS[mode]}`,
+              text: `<document>\n${text}\n</document>\n\n${prompt}`,
             },
           ];
   

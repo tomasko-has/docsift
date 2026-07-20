@@ -229,6 +229,25 @@ export default function Home() {
           <div className="relative min-h-[320px] overflow-hidden rounded-b-2xl border border-t-0 border-white/10 bg-[#15151c] p-5 shadow-xl shadow-black/40">
             <Eyebrow>03 — Output</Eyebrow>
 
+            {result && (
+              <div className="mt-2 flex justify-end gap-2">
+                <button
+                  onClick={copyJson}
+                  className="rounded-lg px-3 py-1.5 font-mono text-[11px] text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
+                >
+                  {copied ? "Copied!" : "Copy JSON"}
+                </button>
+                {result.mode === "extract" && (
+                  <button
+                    onClick={exportCsv}
+                    className="rounded-lg px-3 py-1.5 font-mono text-[11px] text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
+                  >
+                    Export CSV
+                  </button>
+                )}
+              </div>
+            )}
+
             {!result && !loading && (
               <div className="mt-16 text-center text-sm text-gray-500">
                 Results land here as a clean, structured dossier.

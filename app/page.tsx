@@ -10,6 +10,36 @@ const MODES: { id: Mode; label: string; hint: string }[] = [
   { id: "ask", label: "Ask a question", hint: "Ask anything about the document" },
 ];
 
+const SAMPLE_INVOICE = `INVOICE #2024-0042
+
+From: Nextera Solutions Ltd.
+123 Business Park, Suite 400
+London, UK
+
+To: Greenfield & Associates
+456 Oak Avenue
+New York, NY 10001
+
+Date: March 3, 2024
+Due: April 2, 2024
+Payment terms: Net 30
+
+Description                     Qty     Rate        Amount
+─────────────────────────────────────────────────────────
+UI/UX Design Services            40h    $95/hr      $3,800.00
+Frontend Development             60h    $120/hr     $7,200.00
+API Integration & Testing        25h    $120/hr     $3,000.00
+Project Management               15h    $85/hr      $1,275.00
+─────────────────────────────────────────────────────────
+                                        Subtotal:   $15,275.00
+                                        Tax (8%):   $1,222.00
+                                        TOTAL:      $16,497.00
+
+Bank: HSBC UK | IBAN: GB29 HBUK 4012 0612 3456 78
+Reference: NEX-GFA-2024-0042
+
+Thank you for your business.`;
+
 export default function Home() {
   const [tab, setTab] = useState<"paste" | "pdf">("paste");
   const [text, setText] = useState("");
@@ -55,6 +85,12 @@ export default function Home() {
     a.download = "docsift-extract.csv";
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function loadSample() {
+    setTab("paste");
+    setText(SAMPLE_INVOICE);
+    setMode("summary");
   }
 
   function handleFile(file: File | undefined) {
@@ -252,6 +288,12 @@ export default function Home() {
                 <div className="mt-2 font-mono text-[11px] tracking-[0.15em] text-gray-600">
                   AWAITING INPUT
                 </div>
+                <button
+                  onClick={loadSample}
+                  className="mt-6 rounded-lg border border-white/10 px-4 py-2 font-mono text-[11px] text-gray-400 transition hover:border-violet-500/50 hover:text-violet-300"
+                >
+                  Try with a sample invoice
+                </button>
               </div>
             )}
 

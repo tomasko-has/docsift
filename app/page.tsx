@@ -17,6 +17,14 @@ export default function Home() {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  async function copyJson() {
+    if (!result) return;
+    await navigator.clipboard.writeText(JSON.stringify(result.data, null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   function handleFile(file: File | undefined) {
     if (!file || file.type !== "application/pdf") return;

@@ -229,25 +229,6 @@ export default function Home() {
           <div className="relative min-h-[320px] overflow-hidden rounded-b-2xl border border-t-0 border-white/10 bg-[#15151c] p-5 shadow-xl shadow-black/40">
             <Eyebrow>03 — Output</Eyebrow>
 
-            {result && (
-              <div className="mt-2 flex justify-end gap-2">
-                <button
-                  onClick={copyJson}
-                  className="rounded-lg px-3 py-1.5 font-mono text-[11px] text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
-                >
-                  {copied ? "Copied!" : "Copy JSON"}
-                </button>
-                {result.mode === "extract" && (
-                  <button
-                    onClick={exportCsv}
-                    className="rounded-lg px-3 py-1.5 font-mono text-[11px] text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
-                  >
-                    Export CSV
-                  </button>
-                )}
-              </div>
-            )}
-
             {!result && !loading && (
               <div className="mt-16 text-center text-sm text-gray-500">
                 Results land here as a clean, structured dossier.
@@ -274,7 +255,7 @@ export default function Home() {
 
             {result && (
               <>
-                <div className="absolute right-5 top-11 -rotate-6 rounded border-2 border-violet-400/80 px-2 py-0.5 font-mono text-[11px] font-semibold tracking-[0.15em] text-violet-300">
+                <div className="absolute right-5 top-5 -rotate-6 rounded border-2 border-violet-400/80 px-2 py-0.5 font-mono text-[11px] font-semibold tracking-[0.15em] text-violet-300">
                   PROCESSED
                 </div>
 
@@ -333,6 +314,22 @@ export default function Home() {
                     </Row>
                   </div>
                 )}
+                <div className="mt-4 flex justify-end gap-2 border-t border-dashed border-white/10 pt-3">
+                  <button
+                    onClick={copyJson}
+                    className="rounded-lg px-3 py-1.5 font-mono text-[11px] text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
+                  >
+                    {copied ? "Copied!" : "Copy JSON"}
+                  </button>
+                  {result.mode === "extract" && (
+                    <button
+                      onClick={exportCsv}
+                      className="rounded-lg px-3 py-1.5 font-mono text-[11px] text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
+                    >
+                      Export CSV
+                    </button>
+                  )}
+                </div>
               </>
             )}
           </div>

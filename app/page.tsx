@@ -50,6 +50,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [question, setQuestion] = useState("");
+  const [streamingText, setStreamingText] = useState("");
 
   async function copyJson() {
     if (!result) return;
@@ -109,9 +110,10 @@ export default function Home() {
     setLoading(true);
     setResult(null);
     setError("");
+    setStreamingText("");
 
     try {
-      const res = await fetch("/api/process", {
+      const res = await fetch("/api/stream", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(
@@ -121,17 +123,36 @@ export default function Home() {
         ),
       });
 
-      const data = await res.json();
+      // Non-stream error responses (400, 502, etc.) come back as JSON
       if (!res.ok) {
-        setError(data.error ?? "Something went wrong.");
-      } else {
-        setResult({ mode, data: data.result, ...(mode === "ask" && { question }) });
-        if (mode === "ask") setQuestion("");
+        const data = await res.json().catch(() => null);
+        setError(data?.error ?? "Something went wrong.");
+        return;
       }
+
+      // Read the streamed text token by token
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let full = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        full += chunk;
+        setStreamingText(full);
+      }
+
+      // Stream finished — parse the accumulated JSON into structured data
+      const cleaned = full.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+      setResult({ mode, data: parsed, ...(mode === "ask" && { question }) });
+      if (mode === "ask") setQuestion("");
     } catch {
-      setError("Could not reach the server.");
+      setError("Could not process the document. Please try again.");
     } finally {
       setLoading(false);
+      setStreamingText("");
     }
   }
 
@@ -298,16 +319,25 @@ export default function Home() {
             )}
 
             {loading && (
-              <div className="mt-8 space-y-4">
-                {[92, 78, 96, 60, 84].map((w, i) => (
-                  <div
-                    key={i}
-                    className="h-3 animate-pulse rounded bg-white/10"
-                    style={{ width: `${w}%` }}
-                  />
-                ))}
-                <div className="font-mono text-[11px] tracking-[0.15em] text-gray-500">
-                  READING DOCUMENT…
+              <div className="mt-4">
+                {streamingText ? (
+                  <div className="whitespace-pre-wrap break-words font-mono text-sm leading-relaxed text-gray-400">
+                    {streamingText}
+                    <span className="inline-block h-4 w-1.5 animate-pulse bg-violet-400" />
+                  </div>
+                ) : (
+                  <div className="mt-4 space-y-4">
+                    {[92, 78, 96, 60, 84].map((w, i) => (
+                      <div
+                        key={i}
+                        className="h-3 animate-pulse rounded bg-white/10"
+                        style={{ width: `${w}%` }}
+                      />
+                    ))}
+                  </div>
+                )}
+                <div className="mt-3 font-mono text-[11px] tracking-[0.15em] text-gray-500">
+                  {streamingText ? "STREAMING…" : "READING DOCUMENT…"}
                 </div>
               </div>
             )}

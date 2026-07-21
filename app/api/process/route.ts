@@ -1,3 +1,5 @@
+import { validateResult } from "@/app/schemas";
+
 const PROMPTS = {
     summary: `Summarize the document. Respond in English regardless of the document's language. Return ONLY JSON, no markdown fences, exactly in this shape:
   {"summary": "2-3 sentence summary", "key_points": ["3 to 5 key points"]}`,
@@ -77,7 +79,9 @@ const PROMPTS = {
       }
   
       const raw = data.content[0].text.replace(/```json|```/g, "").trim();
-      return Response.json({ result: JSON.parse(raw) });
+      const parsed = JSON.parse(raw);
+      const result = validateResult(mode, parsed);
+      return Response.json({ result });
     } catch {
       return Response.json(
         { error: "Could not process the document. Please try again." },

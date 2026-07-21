@@ -1,8 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import {
+  validateResult,
+  type SummaryResult,
+  type ExtractResult,
+  type AskResult,
+  type AiResult,
+} from "@/app/schemas";
 
 type Mode = "summary" | "extract" | "ask";
+
+// Typed wrapper around the result state so we know which shape we have
+type Result =
+  | { mode: "summary"; data: SummaryResult }
+  | { mode: "extract"; data: ExtractResult }
+  | { mode: "ask"; data: AskResult; question: string };
 
 const MODES: { id: Mode; label: string; hint: string }[] = [
   { id: "summary", label: "Summarize", hint: "Executive summary + key points" },
@@ -45,7 +58,7 @@ export default function Home() {
   const [text, setText] = useState("");
   const [pdf, setPdf] = useState<{ name: string; sizeKB: number; data: string } | null>(null);
   const [mode, setMode] = useState<Mode>("summary");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Result | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -143,10 +156,17 @@ export default function Home() {
         setStreamingText(full);
       }
 
-      // Stream finished — parse the accumulated JSON into structured data
+      // Stream finished — parse and validate the accumulated JSON
       const cleaned = full.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(cleaned);
-      setResult({ mode, data: parsed, ...(mode === "ask" && { question }) });
+      const validated = validateResult(mode, parsed);
+      if (mode === "ask") {
+        setResult({ mode, data: validated as AskResult, question });
+      } else if (mode === "extract") {
+        setResult({ mode, data: validated as ExtractResult });
+      } else {
+        setResult({ mode, data: validated as SummaryResult });
+      }
       if (mode === "ask") setQuestion("");
     } catch {
       setError("Could not process the document. Please try again.");
@@ -373,7 +393,7 @@ export default function Home() {
                     </Row>
                     <Row label="Dates">
                       {result.data.dates?.length
-                        ? result.data.dates.map((d: any, i: number) => (
+                        ? result.data.dates.map((d, i) => (
                             <div key={i} className="mb-1">
                               <b className="font-mono text-white">{d.date}</b>{" "}
                               <span className="text-gray-400">— {d.context}</span>
@@ -383,7 +403,7 @@ export default function Home() {
                     </Row>
                     <Row label="Parties">
                       {result.data.parties?.length
-                        ? result.data.parties.map((p: any, i: number) => (
+                        ? result.data.parties.map((p, i) => (
                             <div key={i} className="mb-1">
                               <b className="text-white">{p.name}</b>{" "}
                               <span className="text-gray-400">({p.role})</span>
@@ -393,7 +413,7 @@ export default function Home() {
                     </Row>
                     <Row label="Amounts">
                       {result.data.amounts?.length
-                        ? result.data.amounts.map((a: any, i: number) => (
+                        ? result.data.amounts.map((a, i) => (
                             <div key={i} className="mb-1">
                               <b className="font-mono text-violet-300">{a.value}</b>{" "}
                               <span className="text-gray-400">— {a.context}</span>

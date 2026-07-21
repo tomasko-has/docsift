@@ -8,6 +8,8 @@ import {
   type AskResult,
   type AiResult,
 } from "@/app/schemas";
+import { Eyebrow, Row } from "@/app/ui";
+import BatchView from "@/app/batch-view";
 
 type Mode = "summary" | "extract" | "ask";
 
@@ -54,6 +56,7 @@ Reference: NEX-GFA-2024-0042
 Thank you for your business.`;
 
 export default function Home() {
+  const [view, setView] = useState<"single" | "batch">("single");
   const [tab, setTab] = useState<"paste" | "pdf">("paste");
   const [text, setText] = useState("");
   const [pdf, setPdf] = useState<{ name: string; sizeKB: number; data: string } | null>(null);
@@ -199,12 +202,34 @@ export default function Home() {
             .
           </p>
         </div>
-        <div className="font-mono text-[11px] uppercase tracking-[0.15em] text-violet-400">
-          AI document intelligence
+        <div className="flex flex-col items-end gap-3">
+          <div className="font-mono text-[11px] uppercase tracking-[0.15em] text-violet-400">
+            AI document intelligence
+          </div>
+          <div className="flex rounded-lg border border-white/10 p-0.5">
+            {(["single", "batch"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`rounded-md px-3 py-1.5 font-mono text-xs transition ${
+                  view === v
+                    ? "bg-violet-500/20 text-violet-300"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                {v === "single" ? "Single" : "Batch"}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
-      {/* Two panes */}
+      {/* Main content — switches between single-doc and batch views */}
+      {view === "batch" ? (
+        <main className="mx-auto mt-8 max-w-5xl">
+          <BatchView />
+        </main>
+      ) : (
       <main className="mx-auto mt-8 grid max-w-5xl items-start gap-6 md:grid-cols-2">
         {/* INPUT */}
         <section className="rounded-2xl border border-white/10 bg-[#15151c] p-5 shadow-xl shadow-black/40">
@@ -451,7 +476,7 @@ export default function Home() {
           </div>
         </section>
       </main>
-
+      )}
       <footer className="mx-auto mt-10 flex max-w-5xl flex-wrap justify-between gap-2 font-mono text-[11px] tracking-[0.1em] text-gray-600">
         <span>PDF + TEXT INPUT · STRUCTURED JSON OUTPUT</span>
         <span>BUILT WITH THE ANTHROPIC API</span>
@@ -460,21 +485,3 @@ export default function Home() {
   );
 }
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="font-mono text-[11px] uppercase tracking-[0.15em] text-violet-400">
-      {children}
-    </div>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-[90px_1fr] gap-4 border-b border-dashed border-white/10 py-3 text-sm last:border-0">
-      <div className="pt-0.5 font-mono text-[11px] uppercase tracking-wider text-gray-500">
-        {label}
-      </div>
-      <div className="leading-relaxed text-gray-200">{children}</div>
-    </div>
-  );
-}

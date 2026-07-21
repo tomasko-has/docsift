@@ -1,4 +1,5 @@
 import { validateResult } from "@/app/schemas";
+import { checkRateLimit, rateLimitResponse } from "@/app/api/rate-limit";
 
 const PROMPTS = {
     summary: `Summarize the document. Respond in English regardless of the document's language. Return ONLY JSON, no markdown fences, exactly in this shape:
@@ -14,6 +15,9 @@ const PROMPTS = {
   };
   
   export async function POST(request: Request) {
+    const limit = checkRateLimit(request);
+    if (!limit.allowed) return rateLimitResponse(limit.retryAfterMs!);
+
     try {
       const {
         text,

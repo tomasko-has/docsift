@@ -542,9 +542,8 @@ export default function Home() {
         </section>
       </main>
       )}
-      <footer className="mx-auto mt-10 flex max-w-5xl flex-wrap justify-between gap-2 font-mono text-[11px] tracking-[0.1em] text-gray-600">
+      <footer className="mx-auto mt-10 flex max-w-5xl justify-center font-mono text-[11px] tracking-[0.1em] text-gray-600">
         <span>PDF + TEXT INPUT · STRUCTURED JSON OUTPUT</span>
-        <span>BUILT WITH THE ANTHROPIC API</span>
       </footer>
     </div>
   );

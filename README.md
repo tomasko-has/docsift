@@ -4,7 +4,7 @@ Upload a PDF or paste text — get an executive summary, structured data, or ans
 
 **Live demo:** [docsift.onrender.com](https://docsift.onrender.com)
 
-![screenshot](./screenshot.png)
+![screenshot](./docs/docsift.png)
 
 ## Features
 

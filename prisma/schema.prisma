@@ -1,0 +1,20 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ProcessedDocument {
+  id        String   @id @default(cuid())
+  mode      String   // "summary" | "extract" | "ask"
+  inputName String   // filename or "Pasted text"
+  question  String?  // only for "ask" mode
+  result    String   // JSON.stringify of the validated result
+  createdAt DateTime @default(now())
+}

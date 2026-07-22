@@ -1,4 +1,5 @@
 import { checkRateLimit, rateLimitResponse } from "@/app/api/rate-limit";
+import { loadTemplatePrompt } from "@/app/api/extract-prompt";
 
 const PROMPTS = {
   summary: `Summarize the document. Respond in English regardless of the document's language. Return ONLY JSON, no markdown fences, exactly in this shape:
@@ -23,7 +24,8 @@ export async function POST(request: Request) {
       pdf,
       mode,
       question,
-    }: { text?: string; pdf?: string; mode: "summary" | "extract" | "ask"; question?: string } =
+      templateId,
+    }: { text?: string; pdf?: string; mode: "summary" | "extract" | "ask"; question?: string; templateId?: string } =
       await request.json();
 
     if (!text && !pdf) {
@@ -34,9 +36,16 @@ export async function POST(request: Request) {
       return Response.json({ error: "Please enter a question." }, { status: 400 });
     }
 
-    const prompt = mode === "ask"
-      ? `${PROMPTS[mode]}\n\nQuestion: ${question}`
-      : PROMPTS[mode];
+    // For extract mode with a template, build a dynamic prompt
+    let prompt: string;
+    if (mode === "ask") {
+      prompt = `${PROMPTS[mode]}\n\nQuestion: ${question}`;
+    } else if (mode === "extract" && templateId) {
+      const templateData = await loadTemplatePrompt(templateId);
+      prompt = templateData ? templateData.prompt : PROMPTS[mode];
+    } else {
+      prompt = PROMPTS[mode];
+    }
 
     const content = pdf
       ? [

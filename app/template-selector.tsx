@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 type TemplateField = { name: string; description: string };
 
@@ -38,7 +38,7 @@ export default function TemplateSelector({
   ]);
   const [error, setError] = useState("");
 
-  const loadTemplates = useCallback(async () => {
+  async function loadTemplates() {
     try {
       const res = await fetch("/api/templates");
       if (!res.ok) throw new Error();
@@ -70,11 +70,11 @@ export default function TemplateSelector({
     } finally {
       setLoading(false);
     }
-  }, [onSelect]);
+  }
 
-  useEffect(() => {
-    loadTemplates();
-  }, [loadTemplates]);
+  // Fetch templates on mount — setState inside loadTemplates is intentional
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+  useEffect(() => { loadTemplates(); }, []);
 
   function getFields(t: Template): TemplateField[] {
     try {

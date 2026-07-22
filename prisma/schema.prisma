@@ -18,3 +18,10 @@ model ProcessedDocument {
   result    String   // JSON.stringify of the validated result
   createdAt DateTime @default(now())
 }
+
+model ExtractionTemplate {
+  id        String   @id @default(cuid())
+  name      String   // e.g. "Invoice", "Contract"
+  fields    String   // JSON string: [{"name": "IBAN", "description": "bank account"}]
+  createdAt DateTime @default(now())
+}

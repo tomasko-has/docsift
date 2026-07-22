@@ -71,49 +71,68 @@ export default function HistoryView() {
       }
 
       if (record.mode === "extract") {
+        // Check if this is a custom template result (flat key-value, no doc_type)
+        // or a standard extract result (has doc_type, dates, parties, amounts)
+        const isStandardExtract = "doc_type" in data && "dates" in data;
+
+        if (isStandardExtract) {
+          return (
+            <div>
+              <Row label="Type">
+                <span className="rounded-md bg-violet-500/20 px-2 py-0.5 text-violet-300">
+                  {data.doc_type}
+                </span>
+              </Row>
+              <Row label="Dates">
+                {data.dates?.length
+                  ? data.dates.map(
+                      (d: { date: string; context: string }, i: number) => (
+                        <div key={i} className="mb-1">
+                          <b className="font-mono text-white">{d.date}</b>{" "}
+                          <span className="text-gray-400">&mdash; {d.context}</span>
+                        </div>
+                      )
+                    )
+                  : "\u2014"}
+              </Row>
+              <Row label="Parties">
+                {data.parties?.length
+                  ? data.parties.map(
+                      (p: { name: string; role: string }, i: number) => (
+                        <div key={i} className="mb-1">
+                          <b className="text-white">{p.name}</b>{" "}
+                          <span className="text-gray-400">({p.role})</span>
+                        </div>
+                      )
+                    )
+                  : "\u2014"}
+              </Row>
+              <Row label="Amounts">
+                {data.amounts?.length
+                  ? data.amounts.map(
+                      (a: { value: string; context: string }, i: number) => (
+                        <div key={i} className="mb-1">
+                          <b className="font-mono text-violet-300">{a.value}</b>{" "}
+                          <span className="text-gray-400">&mdash; {a.context}</span>
+                        </div>
+                      )
+                    )
+                  : "\u2014"}
+              </Row>
+            </div>
+          );
+        }
+
+        // Custom template result — flat key-value object
         return (
           <div>
-            <Row label="Type">
-              <span className="rounded-md bg-violet-500/20 px-2 py-0.5 text-violet-300">
-                {data.doc_type}
-              </span>
-            </Row>
-            <Row label="Dates">
-              {data.dates?.length
-                ? data.dates.map(
-                    (d: { date: string; context: string }, i: number) => (
-                      <div key={i} className="mb-1">
-                        <b className="font-mono text-white">{d.date}</b>{" "}
-                        <span className="text-gray-400">&mdash; {d.context}</span>
-                      </div>
-                    )
-                  )
-                : "\u2014"}
-            </Row>
-            <Row label="Parties">
-              {data.parties?.length
-                ? data.parties.map(
-                    (p: { name: string; role: string }, i: number) => (
-                      <div key={i} className="mb-1">
-                        <b className="text-white">{p.name}</b>{" "}
-                        <span className="text-gray-400">({p.role})</span>
-                      </div>
-                    )
-                  )
-                : "\u2014"}
-            </Row>
-            <Row label="Amounts">
-              {data.amounts?.length
-                ? data.amounts.map(
-                    (a: { value: string; context: string }, i: number) => (
-                      <div key={i} className="mb-1">
-                        <b className="font-mono text-violet-300">{a.value}</b>{" "}
-                        <span className="text-gray-400">&mdash; {a.context}</span>
-                      </div>
-                    )
-                  )
-                : "\u2014"}
-            </Row>
+            {Object.entries(data as Record<string, string | null>).map(
+              ([key, val]) => (
+                <Row key={key} label={key}>
+                  {(val as string) ?? "\u2014"}
+                </Row>
+              )
+            )}
           </div>
         );
       }

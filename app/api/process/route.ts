@@ -1,6 +1,7 @@
 import { validateResult } from "@/app/schemas";
 import { checkRateLimit, rateLimitResponse } from "@/app/api/rate-limit";
 import { prisma } from "@/app/lib/prisma";
+import { loadTemplatePrompt } from "@/app/api/extract-prompt";
 
 const PROMPTS = {
     summary: `Summarize the document. Respond in English regardless of the document's language. Return ONLY JSON, no markdown fences, exactly in this shape:
@@ -26,7 +27,8 @@ const PROMPTS = {
         mode,
         question,
         fileName,
-      }: { text?: string; pdf?: string; mode: "summary" | "extract" | "ask"; question?: string; fileName?: string } =
+        templateId,
+      }: { text?: string; pdf?: string; mode: "summary" | "extract" | "ask"; question?: string; fileName?: string; templateId?: string } =
         await request.json();
 
       if (!text && !pdf) {
@@ -37,10 +39,21 @@ const PROMPTS = {
         return Response.json({ error: "Please enter a question." }, { status: 400 });
       }
 
-      // For ask mode, append the user's question to the prompt
-      const prompt = mode === "ask"
-        ? `${PROMPTS[mode]}\n\nQuestion: ${question}`
-        : PROMPTS[mode];
+      // For extract mode with a template, build a dynamic prompt
+      let prompt: string;
+      let templateData: Awaited<ReturnType<typeof loadTemplatePrompt>> = null;
+
+      if (mode === "extract" && templateId) {
+        templateData = await loadTemplatePrompt(templateId);
+      }
+
+      if (mode === "ask") {
+        prompt = `${PROMPTS[mode]}\n\nQuestion: ${question}`;
+      } else if (mode === "extract" && templateData) {
+        prompt = templateData.prompt;
+      } else {
+        prompt = PROMPTS[mode];
+      }
 
       const content = pdf
         ? [
@@ -86,7 +99,11 @@ const PROMPTS = {
   
       const raw = data.content[0].text.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(raw);
-      const result = validateResult(mode, parsed);
+
+      // Use custom schema for template-based extraction, standard schema otherwise
+      const result = templateData
+        ? templateData.schema.parse(parsed)
+        : validateResult(mode, parsed);
 
       // Save to history — fileName comes from batch view, fallback to generic name
       const inputName = fileName ?? (pdf ? "Uploaded PDF" : "Pasted text");

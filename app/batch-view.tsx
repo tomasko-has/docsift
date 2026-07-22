@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { type SummaryResult, type ExtractResult } from "@/app/schemas";
 import { Eyebrow, Row } from "@/app/ui";
+import TemplateSelector from "@/app/template-selector";
 
 type BatchMode = "summary" | "extract";
 
@@ -12,7 +13,7 @@ type BatchFile = {
   name: string;
   sizeKB: number;
   status: "pending" | "processing" | "done" | "error";
-  result?: SummaryResult | ExtractResult;
+  result?: SummaryResult | ExtractResult | Record<string, string | null>;
   error?: string;
 };
 
@@ -50,6 +51,7 @@ export default function BatchView() {
   const [mode, setMode] = useState<BatchMode>("extract");
   const [processing, setProcessing] = useState(false);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [templateId, setTemplateId] = useState<string | null>(null);
 
   // --- File management ---
 
@@ -95,7 +97,7 @@ export default function BatchView() {
         const res = await fetch("/api/process", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ pdf: base64, mode, fileName: f.name }),
+          body: JSON.stringify({ pdf: base64, mode, fileName: f.name, ...(mode === "extract" && templateId && { templateId }) }),
         });
 
         if (!res.ok) {
@@ -126,6 +128,15 @@ export default function BatchView() {
         rows.push([f.name, r.summary, r.key_points.join("; ")]);
       }
       downloadCsv(rows, "docsift-batch-summary.csv");
+    } else if (isCustomExtract) {
+      const firstResult = doneFiles[0]?.result as Record<string, string | null> | undefined;
+      const fieldNames = firstResult ? Object.keys(firstResult) : [];
+      const rows = [["File", ...fieldNames]];
+      for (const f of doneFiles) {
+        const r = f.result as Record<string, string | null>;
+        rows.push([f.name, ...fieldNames.map((fn) => r[fn] ?? "")]);
+      }
+      downloadCsv(rows, "docsift-batch-extract.csv");
     } else {
       const rows = [["File", "Doc Type", "Date", "Date Context", "Party", "Party Role", "Amount", "Amount Context"]];
       for (const f of doneFiles) {
@@ -149,6 +160,7 @@ export default function BatchView() {
   const processedCount = doneCount + errorCount;
   const currentIndex = files.findIndex((f) => f.status === "processing");
   const hasDone = doneCount > 0;
+  const isCustomExtract = mode === "extract" && templateId !== null;
 
   return (
     <div className="grid items-start gap-6 md:grid-cols-2">
@@ -240,6 +252,14 @@ export default function BatchView() {
           </div>
         </div>
 
+        {mode === "extract" && (
+          <TemplateSelector
+            selectedId={templateId}
+            onSelect={setTemplateId}
+            disabled={processing}
+          />
+        )}
+
         {/* Progress bar */}
         {processing && (
           <div className="mt-4">
@@ -323,6 +343,8 @@ export default function BatchView() {
                           <th className="px-3 py-2">Summary</th>
                           <th className="px-3 py-2">Points</th>
                         </>
+                      ) : isCustomExtract ? (
+                        <th className="px-3 py-2">Fields</th>
                       ) : (
                         <>
                           <th className="px-3 py-2">Type</th>
@@ -345,6 +367,7 @@ export default function BatchView() {
                           onToggle={() =>
                             setExpandedRow(expandedRow === f.id ? null : f.id)
                           }
+                          isCustomExtract={isCustomExtract}
                         />
                       ))}
                   </tbody>
@@ -384,11 +407,13 @@ function TableRow({
   mode,
   expanded,
   onToggle,
+  isCustomExtract,
 }: {
   file: BatchFile;
   mode: BatchMode;
   expanded: boolean;
   onToggle: () => void;
+  isCustomExtract: boolean;
 }) {
   const r = file.result!;
 
@@ -408,6 +433,10 @@ function TableRow({
               {(r as SummaryResult).key_points.length} points
             </td>
           </>
+        ) : isCustomExtract ? (
+          <td className="px-3 py-3 text-gray-400">
+            {Object.keys(r).length} fields
+          </td>
         ) : (
           <>
             <td className="px-3 py-3">
@@ -430,7 +459,7 @@ function TableRow({
       {expanded && (
         <tr>
           <td
-            colSpan={mode === "summary" ? 3 : 5}
+            colSpan={mode === "summary" ? 3 : isCustomExtract ? 2 : 5}
             className="border-b border-white/10 bg-white/[0.02] px-3 py-3"
           >
             {mode === "summary" ? (
@@ -446,6 +475,14 @@ function TableRow({
                     ))}
                   </ul>
                 </Row>
+              </div>
+            ) : isCustomExtract ? (
+              <div>
+                {Object.entries(r as Record<string, string | null>).map(([key, val]) => (
+                  <Row key={key} label={key}>
+                    {val ?? "\u2014"}
+                  </Row>
+                ))}
               </div>
             ) : (
               <div>

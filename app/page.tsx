@@ -11,6 +11,7 @@ import {
 import { Eyebrow, Row } from "@/app/ui";
 import BatchView from "@/app/batch-view";
 import HistoryView from "@/app/history-view";
+import TemplateSelector from "@/app/template-selector";
 
 type Mode = "summary" | "extract" | "ask";
 
@@ -18,6 +19,7 @@ type Mode = "summary" | "extract" | "ask";
 type Result =
   | { mode: "summary"; data: SummaryResult }
   | { mode: "extract"; data: ExtractResult }
+  | { mode: "extract-custom"; data: Record<string, string | null>; templateFields: string[] }
   | { mode: "ask"; data: AskResult; question: string };
 
 const MODES: { id: Mode; label: string; hint: string }[] = [
@@ -68,6 +70,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [question, setQuestion] = useState("");
   const [streamingText, setStreamingText] = useState("");
+  const [templateId, setTemplateId] = useState<string | null>(null);
 
   async function copyJson() {
     if (!result) return;
@@ -77,32 +80,35 @@ export default function Home() {
   }
 
   function exportCsv() {
-    if (!result || result.mode !== "extract") return;
-    const d = result.data;
-    const rows: string[][] = [["Section", "Field1", "Field2"]];
-
-    for (const date of d.dates ?? []) {
-      rows.push(["Dates", date.date, date.context]);
+    if (!result) return;
+    if (result.mode === "extract") {
+      const d = result.data;
+      const rows: string[][] = [["Section", "Field1", "Field2"]];
+      for (const date of d.dates ?? []) rows.push(["Dates", date.date, date.context]);
+      for (const party of d.parties ?? []) rows.push(["Parties", party.name, party.role]);
+      for (const amount of d.amounts ?? []) rows.push(["Amounts", amount.value, amount.context]);
+      const csv = rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "docsift-extract.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } else if (result.mode === "extract-custom") {
+      const rows: string[][] = [["Field", "Value"]];
+      for (const field of result.templateFields) {
+        rows.push([field, result.data[field] ?? ""]);
+      }
+      const csv = rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "docsift-extract.csv";
+      a.click();
+      URL.revokeObjectURL(url);
     }
-    for (const party of d.parties ?? []) {
-      rows.push(["Parties", party.name, party.role]);
-    }
-    for (const amount of d.amounts ?? []) {
-      rows.push(["Amounts", amount.value, amount.context]);
-    }
-
-    // Wrap each cell in quotes and escape any quotes inside the value
-    const csv = rows
-      .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "docsift-extract.csv";
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   function loadSample() {
@@ -157,8 +163,8 @@ export default function Home() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(
           tab === "pdf" && pdf
-            ? { pdf: pdf.data, mode, ...(mode === "ask" && { question }) }
-            : { text, mode, ...(mode === "ask" && { question }) }
+            ? { pdf: pdf.data, mode, ...(mode === "ask" && { question }), ...(mode === "extract" && templateId && { templateId }) }
+            : { text, mode, ...(mode === "ask" && { question }), ...(mode === "extract" && templateId && { templateId }) }
         ),
       });
 
@@ -185,12 +191,21 @@ export default function Home() {
       // Stream finished — parse and validate the accumulated JSON
       const cleaned = full.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(cleaned);
-      const validated = validateResult(mode, parsed);
       if (mode === "ask") {
+        const validated = validateResult(mode, parsed);
         setResult({ mode, data: validated as AskResult, question });
+      } else if (mode === "extract" && templateId) {
+        // Custom template — result is a flat key-value object
+        setResult({
+          mode: "extract-custom",
+          data: parsed as Record<string, string | null>,
+          templateFields: Object.keys(parsed),
+        });
       } else if (mode === "extract") {
+        const validated = validateResult(mode, parsed);
         setResult({ mode, data: validated as ExtractResult });
       } else {
+        const validated = validateResult(mode, parsed);
         setResult({ mode, data: validated as SummaryResult });
       }
 
@@ -339,6 +354,14 @@ export default function Home() {
             </div>
           </div>
 
+          {mode === "extract" && (
+            <TemplateSelector
+              selectedId={templateId}
+              onSelect={setTemplateId}
+              disabled={loading}
+            />
+          )}
+
           {mode === "ask" && (
             <div className="mt-4">
               <input
@@ -481,6 +504,16 @@ export default function Home() {
                   </div>
                 )}
 
+                {result.mode === "extract-custom" && (
+                  <div className="mt-4">
+                    {result.templateFields.map((field) => (
+                      <Row key={field} label={field}>
+                        {result.data[field] ?? "\u2014"}
+                      </Row>
+                    ))}
+                  </div>
+                )}
+
                 {result.mode === "ask" && (
                   <div className="mt-4">
                     <Row label="Question">{result.question}</Row>
@@ -494,7 +527,7 @@ export default function Home() {
                   >
                     {copied ? "Copied!" : "Copy JSON"}
                   </button>
-                  {result.mode === "extract" && (
+                  {(result.mode === "extract" || result.mode === "extract-custom") && (
                     <button
                       onClick={exportCsv}
                       className="rounded-lg px-3 py-1.5 font-mono text-[11px] text-gray-400 transition hover:bg-white/5 hover:text-gray-200"

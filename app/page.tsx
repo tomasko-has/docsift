@@ -120,6 +120,28 @@ export default function Home() {
     reader.readAsDataURL(file);
   }
 
+  async function saveToHistory(
+    saveMode: Mode,
+    inputName: string,
+    result: string,
+    saveQuestion?: string
+  ) {
+    try {
+      await fetch("/api/history", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          mode: saveMode,
+          inputName,
+          question: saveQuestion,
+          result,
+        }),
+      });
+    } catch {
+      // Saving to history is best-effort — don't block the user if it fails
+    }
+  }
+
   const hasSource = tab === "pdf" ? !!pdf : !!text.trim();
 
   async function handleSubmit() {
@@ -170,6 +192,11 @@ export default function Home() {
       } else {
         setResult({ mode, data: validated as SummaryResult });
       }
+
+      // Save to history after successful stream parse
+      const inputName = tab === "pdf" && pdf ? pdf.name : "Pasted text";
+      saveToHistory(mode, inputName, cleaned, mode === "ask" ? question : undefined);
+
       if (mode === "ask") setQuestion("");
     } catch {
       setError("Could not process the document. Please try again.");

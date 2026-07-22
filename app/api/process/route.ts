@@ -1,5 +1,6 @@
 import { validateResult } from "@/app/schemas";
 import { checkRateLimit, rateLimitResponse } from "@/app/api/rate-limit";
+import { prisma } from "@/app/lib/prisma";
 
 const PROMPTS = {
     summary: `Summarize the document. Respond in English regardless of the document's language. Return ONLY JSON, no markdown fences, exactly in this shape:
@@ -24,7 +25,8 @@ const PROMPTS = {
         pdf,
         mode,
         question,
-      }: { text?: string; pdf?: string; mode: "summary" | "extract" | "ask"; question?: string } =
+        fileName,
+      }: { text?: string; pdf?: string; mode: "summary" | "extract" | "ask"; question?: string; fileName?: string } =
         await request.json();
 
       if (!text && !pdf) {
@@ -85,6 +87,18 @@ const PROMPTS = {
       const raw = data.content[0].text.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(raw);
       const result = validateResult(mode, parsed);
+
+      // Save to history — fileName comes from batch view, fallback to generic name
+      const inputName = fileName ?? (pdf ? "Uploaded PDF" : "Pasted text");
+      await prisma.processedDocument.create({
+        data: {
+          mode,
+          inputName,
+          question: mode === "ask" ? question : null,
+          result: JSON.stringify(result),
+        },
+      });
+
       return Response.json({ result });
     } catch {
       return Response.json(

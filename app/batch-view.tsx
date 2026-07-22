@@ -95,7 +95,7 @@ export default function BatchView() {
         const res = await fetch("/api/process", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ pdf: base64, mode }),
+          body: JSON.stringify({ pdf: base64, mode, fileName: f.name }),
         });
 
         if (!res.ok) {

@@ -10,6 +10,7 @@ import {
 } from "@/app/schemas";
 import { Eyebrow, Row } from "@/app/ui";
 import BatchView from "@/app/batch-view";
+import HistoryView from "@/app/history-view";
 
 type Mode = "summary" | "extract" | "ask";
 
@@ -56,7 +57,7 @@ Reference: NEX-GFA-2024-0042
 Thank you for your business.`;
 
 export default function Home() {
-  const [view, setView] = useState<"single" | "batch">("single");
+  const [view, setView] = useState<"single" | "batch" | "history">("single");
   const [tab, setTab] = useState<"paste" | "pdf">("paste");
   const [text, setText] = useState("");
   const [pdf, setPdf] = useState<{ name: string; sizeKB: number; data: string } | null>(null);
@@ -234,7 +235,7 @@ export default function Home() {
             AI document intelligence
           </div>
           <div className="flex rounded-lg border border-white/10 p-0.5">
-            {(["single", "batch"] as const).map((v) => (
+            {(["single", "batch", "history"] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
@@ -244,7 +245,7 @@ export default function Home() {
                     : "text-gray-400 hover:text-gray-200"
                 }`}
               >
-                {v === "single" ? "Single" : "Batch"}
+                {v === "single" ? "Single" : v === "batch" ? "Batch" : "History"}
               </button>
             ))}
           </div>
@@ -255,6 +256,10 @@ export default function Home() {
       {view === "batch" ? (
         <main className="mx-auto mt-8 max-w-5xl">
           <BatchView />
+        </main>
+      ) : view === "history" ? (
+        <main className="mx-auto mt-8 max-w-3xl">
+          <HistoryView />
         </main>
       ) : (
       <main className="mx-auto mt-8 grid max-w-5xl items-start gap-6 md:grid-cols-2">
